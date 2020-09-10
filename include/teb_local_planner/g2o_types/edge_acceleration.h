@@ -49,6 +49,7 @@
 #include <teb_local_planner/g2o_types/penalties.h>
 #include <teb_local_planner/teb_config.h>
 #include <teb_local_planner/g2o_types/base_teb_edges.h>
+#include <teb_local_planner/misc.h>
 
 #include <geometry_msgs/Twist.h>
 
@@ -110,16 +111,19 @@ public:
     
     if (cfg_->trajectory.exact_arc_length) // use exact arc length instead of Euclidean approximation
     {
-        if (angle_diff1 != 0)
-        {
-            const double radius =  dist1/(2*sin(angle_diff1/2));
-            dist1 = fabs( angle_diff1 * radius ); // actual arg length!
-        }
-        if (angle_diff2 != 0)
-        {
-            const double radius =  dist2/(2*sin(angle_diff2/2));
-            dist2 = fabs( angle_diff2 * radius ); // actual arg length!
-        }
+      double sin;
+      if (angle_diff1 != 0)
+      {
+        teb_local_planner::sin_approx(angle_diff1 / 2, sin);
+        const double radius =  dist1 / (2*sin);
+        dist1 = fabs( angle_diff1 * radius ); // actual arg length!
+      }
+      if (angle_diff2 != 0)
+      {
+        teb_local_planner::sin_approx(angle_diff2 / 2, sin);
+        const double radius =  dist2 / (2*sin);
+        dist2 = fabs( angle_diff2 * radius ); // actual arg length!
+      }
     }
     
     double vel1 = dist1 / dt1->dt();
@@ -127,10 +131,11 @@ public:
     
     
     // consider directions
-//     vel1 *= g2o::sign(diff1[0]*cos(pose1->theta()) + diff1[1]*sin(pose1->theta())); 
-//     vel2 *= g2o::sign(diff2[0]*cos(pose2->theta()) + diff2[1]*sin(pose2->theta())); 
-    vel1 *= fast_sigmoid( 100*(diff1.x()*cos(pose1->theta()) + diff1.y()*sin(pose1->theta())) ); 
-    vel2 *= fast_sigmoid( 100*(diff2.x()*cos(pose2->theta()) + diff2.y()*sin(pose2->theta())) ); 
+    double s1, c1, s2, c2;
+    teb_local_planner::sincos_approx(pose1->theta(), s1, c1);
+    teb_local_planner::sincos_approx(pose2->theta(), s2, c2);
+    vel1 *= fast_sigmoid( 100*(diff1.x()*c1 + diff1.y()*s1) );
+    vel2 *= fast_sigmoid( 100*(diff2.x()*c2 + diff2.y()*s2) );
     
     const double acc_lin  = (vel2 - vel1)*2 / ( dt1->dt() + dt2->dt() );
    
@@ -318,16 +323,19 @@ public:
     const double angle_diff = g2o::normalize_theta(pose2->theta() - pose1->theta());
     if (cfg_->trajectory.exact_arc_length && angle_diff != 0)
     {
-        const double radius =  dist/(2*sin(angle_diff/2));
-        dist = fabs( angle_diff * radius ); // actual arg length!
+      double sin;
+      teb_local_planner::sin_approx(angle_diff / 2, sin);
+      const double radius =  dist / (2*sin);
+      dist = fabs( angle_diff * radius ); // actual arg length!
     }
     
     const double vel1 = _measurement->linear.x;
     double vel2 = dist / dt->dt();
 
     // consider directions
-    //vel2 *= g2o::sign(diff[0]*cos(pose1->theta()) + diff[1]*sin(pose1->theta())); 
-    vel2 *= fast_sigmoid( 100*(diff.x()*cos(pose1->theta()) + diff.y()*sin(pose1->theta())) ); 
+    double sin, cos;
+    teb_local_planner::sincos_approx(pose1->theta(), sin, cos);
+    vel2 *= fast_sigmoid( 100*(diff.x()*cos + diff.y()*sin) );
     
     const double acc_lin  = (vel2 - vel1) / dt->dt();
     
@@ -410,16 +418,19 @@ public:
     const double angle_diff = g2o::normalize_theta(pose_goal->theta() - pose_pre_goal->theta());
     if (cfg_->trajectory.exact_arc_length  && angle_diff != 0)
     {
-        double radius =  dist/(2*sin(angle_diff/2));
-        dist = fabs( angle_diff * radius ); // actual arg length!
+      double sin;
+      teb_local_planner::sin_approx(angle_diff / 2, sin);
+      double radius =  dist / (2*sin);
+      dist = fabs( angle_diff * radius ); // actual arg length!
     }
     
     double vel1 = dist / dt->dt();
     const double vel2 = _measurement->linear.x;
     
     // consider directions
-    //vel1 *= g2o::sign(diff[0]*cos(pose_pre_goal->theta()) + diff[1]*sin(pose_pre_goal->theta())); 
-    vel1 *= fast_sigmoid( 100*(diff.x()*cos(pose_pre_goal->theta()) + diff.y()*sin(pose_pre_goal->theta())) ); 
+    double sin, cos;
+    teb_local_planner::sincos_approx(pose_pre_goal->theta(), sin, cos);
+    vel1 *= fast_sigmoid( 100*(diff.x()*cos + diff.y()*sin) );
     
     const double acc_lin  = (vel2 - vel1) / dt->dt();
 
