@@ -96,8 +96,8 @@ public:
     // non holonomic constraint
 
     double s1, c1, s2, c2;
-    teb_local_planner::sincos_approx(conf1->theta(), s1, c1);
-    teb_local_planner::sincos_approx(conf2->theta(), s2, c2);
+    cfg_->sincos(conf1->theta(), s1, c1);
+    cfg_->sincos(conf2->theta(), s2, c2);
     _error[0] = fabs( ( c1+c2 ) * deltaS[1] - ( s1+s2 ) * deltaS[0] );
 
     // positive-drive-direction constraint

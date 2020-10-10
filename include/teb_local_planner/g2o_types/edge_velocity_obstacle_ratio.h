@@ -52,14 +52,14 @@ public:
     if (cfg_->trajectory.exact_arc_length && angle_diff != 0)
     {
       double sin;
-      teb_local_planner::sin_approx(angle_diff / 2, sin);
+      cfg_->sin(angle_diff / 2, sin);
       double radius = dist / (2*sin);
       dist = fabs( angle_diff * radius ); // actual arg length!
     }
     double vel = dist / deltaT->estimate();
 
     double sin, cos;
-    teb_local_planner::sincos_approx(conf1->theta(), sin, cos);
+    cfg_->sincos(conf1->theta(), sin, cos);
     vel *= fast_sigmoid( 100 * (deltaS.x()*cos + deltaS.y()*sin) ); // consider direction
 
     const double omega = angle_diff / deltaT->estimate();
